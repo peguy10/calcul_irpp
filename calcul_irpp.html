@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>IRPP – Déclaration & Calcul</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --brand:#f5a623;
+      --ink:#1f2937;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --bg:#f9fafb;
+      --card:#ffffff;
+      --accent:#fde7c1;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);margin:0;color:var(--ink)}
+    .wrap{max-width:1100px;margin:28px auto;padding:0 16px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .logo{width:28px;height:28px;border-radius:6px;background:var(--brand)}
+    h1{font-size:22px;margin:0}
+    .tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin:10px 0 18px}
+    .tab{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:600;cursor:pointer}
+    .tab.active{background:var(--accent);border-color:#f6c375}
+    .panel{display:none}
+    .panel.active{display:block}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.04);padding:12px}
+    fieldset{border:0;margin:14px 0 8px;padding:0}
+    legend{background:var(--accent);border:1px solid #f6c375;border-radius:8px;padding:8px 10px;font-weight:700}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{border:1px solid var(--line);padding:8px;text-align:center}
+    th{background:#fcfcfc}
+    input[type=number]{width:140px;padding:6px;border:1px solid var(--line);border-radius:8px}
+    .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+    .summary .box{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}
+    .footer{display:flex;justify-content:space-between;gap:10px;margin-top:16px}
+    .btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:700}
+    .primary{background:var(--brand);color:#fff}
+    .ghost{background:#eef2ff;color:#374151}
+    .totals{font-size:16px;font-weight:800}
+    .right{display:flex;gap:10px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo"></div>
+      <h1>Déclaration IRPP – Formulaires & Calcul</h1>
+    </header>
+
+    <div class="tabs" id="tabs"></div>
+
+    <div id="panels"></div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="footer">
+        <button class="ghost btn" onclick="history.back()">← Précédent</button>
+        <div class="right">
+          <div class="totals">Montant Total des Impôts (toutes catégories) : <span id="grandTotal">0</span></div>
+          <button class="primary btn" id="save">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // -------- utilitaires --------
+    const toNum = v => isNaN(parseFloat(v)) ? 0 : parseFloat(v);
+    const fmt = n => new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2}).format(n);
+
+    // --------- templates par catégorie (HTML + calcul spécifique) ---------
+    const Catalog = {
+      // ---------- CAT1 ----------
+        cat1: {
+            title: 'I – Traitements, Salaires, Pensions et Rentes Viagères',
+            render(){
+                const id='cat1';
+                return `
+                <div class="card panel" id="panel-${id}">
+                    <fieldset>
+                        <legend>${this.title}</legend>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th style="width:80px">Ligne</th>
+                                <th>Libellé</th>
+                                <th>Base imposable annuelle</th>
+                                <th>Retenues opérées</th>
+                                <th>Impôt dû</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            ${[
+                                {code:'LINE01',label:'Traitement / Salaire, pension ou rente de base annuel(le)'},
+                                {code:'LINE02',label:'Autre traitement salarial'},
+                                {code:'LINE03',label:'Revenus exceptionnels'},
+                            ].map((r,i)=>`
+                                    <tr>
+                                    <td>${r.code}</td>
+                                    <td style="text-align:left">${r.label}</td>
+                                    <td><input type="number" class="c1-base" value="0"></td>
+                                    <td><input type="number" class="c1-ret" value="0"></td>
+                                    <td class="c1-tax">0</td>
+                                    </tr>
+                            `).join('')}
+                            </tbody>
+                        </table>
+                    </fieldset>
+
+                    <div class="summary">
+                        <div class="box">
+                            <div><b>Récap – Base imposable annuelle</b></div>
+                            <div id="c1-sum-base">0</div>
+                        </div>
+                        <div class="box">
+                            <div><b>Montant retenu / déjà payé</b></div>
+                            <div id="c1-sum-ret">0</div>
+                        </div>
+                        <div class="box">
+                            <div><b>Montant impôts</b></div>
+                            <div id="c1-sum-tax">0</div>
+                        </div>
+                        <div class="box">
+                            <div><b>Montant à payer</b></div>
+                            <div id="c1-to-pay">0</div>
+                        </div>
+                    </div>
+                </div>`;
+            },
+            compute(panel){
+            let sumBase=0,sumRet=0,sumTax=0;
+            const rows = panel.querySelectorAll('tbody tr');
+            rows.forEach(tr=>{
+                const base = toNum(tr.querySelector('.c1-base').value);
+                const ret  = toNum(tr.querySelector('.c1-ret').value);
+                const tax  = Math.max(base - ret, 0); // logique propre Cat1
+                tr.querySelector('.c1-tax').textContent = fmt(tax);
+                sumBase += base; sumRet += ret; sumTax += tax;
+            });
+            panel.querySelector('#c1-sum-base').textContent = fmt(sumBase);
+            panel.querySelector('#c1-sum-ret').textContent  = fmt(sumRet);
+            panel.querySelector('#c1-sum-tax').textContent  = fmt(sumTax);
+            const toPay = Math.max(sumTax - sumRet, 0);
+            panel.querySelector('#c1-to-pay').textContent   = fmt(toPay);
+            return sumTax; // renvoyé pour le grand total
+            }
+        },
+
+      // ---------- CAT2 ----------
+        cat2: {
+            title: 'II – Revenus de Capitaux Mobiliers',
+            render(){
+            const id='cat2';
+            const lines = [
+                {code:'LINE05',label:"Revenus des produits des actions, parts de capital et assimilés",taux:15},
+                {code:'LINE06',label:"Revenus des obligations",taux:15},
+                {code:'LINE08',label:"Montant des placements sur les comptes épargne",taux:0},
+                {code:'LINE07',label:"Revenus des créances, dépôts, cautionnements et comptes courants",taux:15},
+                {code:'LINE09',label:"Intérêts des comptes d'épargne (partie imposable)",taux:15},
+                {code:'LINE10',label:"Gains sur cession d'actions, d'obligations et autres parts de capital",taux:15},
+                {code:'LINE11',label:"Revenus tirés des actifs numériques",taux:15},
+                {code:'LINE12',label:"Rémunération des obligations (≥ 5 ans)",taux:5},
+                {code:'LINE13',label:"Revenus valeurs mobilières admises à la cote BVMAC",taux:10},
+                {code:'LINE14',label:"Revenus capitaux mobiliers payés dans un paradis fiscal",taux:30},
+                {code:'LINE15',label:"Revenus des placements exonérés",taux:0},
+                {code:'LINE16',label:"Autres revenus (préciser)",taux:15},
+            ];
+            const body = lines.map(r=>`
+                <tr>
+                <td>${r.code}</td>
+                <td style="text-align:left">${r.label}</td>
+                <td><input type="number" class="c2-net" value="0"></td>
+                <td><input type="number" class="c2-brut" value="0"></td>
+                <td><input type="number" class="c2-taux" value="${r.taux}"></td>
+                <td class="c2-principal">0</td>
+                </tr>
+            `).join('');
+
+            return `
+            <div class="card panel" id="panel-${id}">
+                <fieldset>
+                <legend>${this.title}</legend>
+                <table>
+                    <thead>
+                    <tr>
+                        <th style="width:80px">Ligne</th>
+                        <th>Libellé</th>
+                        <th>Revenu net imposable</th>
+                        <th>Revenu brut imposable</th>
+                        <th>Taux (%)</th>
+                        <th>Principal</th>
+                    </tr>
+                    </thead>
+                    <tbody>${body}</tbody>
+                    <tfoot>
+                    <tr>
+                        <th colspan="5" style="text-align:right">TOTAL</th>
+                        <th id="c2-total">0</th>
+                    </tr>
+                    </tfoot>
+                </table>
+                </fieldset>
+
+                <fieldset>
+                <legend>IRCM PAYER</legend>
+                <table>
+                    <thead>
+                    <tr>
+                        <th style="width:280px"></th>
+                        <th>Montant retenu / déjà payé</th>
+                        <th>Principal</th>
+                        <th>CAC</th>
+                        <th>Pénalités</th>
+                        <th>Total</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>IRPP sur IRCM dû</td>
+                        <td class="c2-irpp-due-ret">0</td>
+                        <td class="c2-irpp-due-principal">0</td>
+                        <td class="c2-irpp-due-cac">0</td>
+                        <td class="c2-irpp-due-pen">0</td>
+                        <td class="c2-irpp-due-total">0</td>
+                    </tr>
+                    <tr>
+                        <td>IRPP sur RCM retenu à la source</td>
+                        <td><input type="number" id="c2-ret-source" value="0"></td>
+                        <td class="c2-empty"></td>
+                        <td class="c2-empty"></td>
+                        <td class="c2-empty"></td>
+                        <td class="c2-ret-source-show">0</td>
+                    </tr>
+                    <tr>
+                        <td>IRPP sur RCM à payer</td>
+                        <td class="c2-empty"></td>
+                        <td class="c2-rcm-pay-principal">0</td>
+                        <td class="c2-rcm-pay-cac">0</td>
+                        <td class="c2-rcm-pay-pen">0</td>
+                        <td class="c2-rcm-pay-total">0</td>
+                    </tr>
+                    </tbody>
+                </table>
+                </fieldset>
+            </div>`;
+            },
+            compute(panel){
+            // lignes principales
+            let total = 0;
+            panel.querySelectorAll('tbody tr').forEach(tr=>{
+                const brut = toNum(tr.querySelector('.c2-brut').value);
+                const taux = toNum(tr.querySelector('.c2-taux').value);
+                const principal = brut * (taux/100); // logique Cat2
+                tr.querySelector('.c2-principal').textContent = fmt(principal);
+                total += principal;
+            });
+            panel.querySelector('#c2-total').textContent = fmt(total);
+
+            // Bloc IRCM
+            // IRPP dû = total principal (on ventile dans la 1ère ligne du bloc)
+            panel.querySelector('.c2-irpp-due-principal').textContent = fmt(total);
+            panel.querySelector('.c2-irpp-due-cac').textContent = fmt(0);
+            panel.querySelector('.c2-irpp-due-pen').textContent = fmt(0);
+            const irppDueTotal = total;
+            panel.querySelector('.c2-irpp-due-total').textContent = fmt(irppDueTotal);
+
+            // Montant retenu à la source (ligne 2)
+            const retenuSource = toNum(panel.querySelector('#c2-ret-source').value);
+            panel.querySelector('.c2-ret-source-show').textContent = fmt(retenuSource);
+
+            // À payer (ligne 3)
+            const aPayer = Math.max(irppDueTotal - retenuSource, 0);
+            panel.querySelector('.c2-rcm-pay-principal').textContent = fmt(aPayer);
+            panel.querySelector('.c2-rcm-pay-cac').textContent = fmt(0);
+            panel.querySelector('.c2-rcm-pay-pen').textContent = fmt(0);
+            panel.querySelector('.c2-rcm-pay-total').textContent = fmt(aPayer);
+
+            return irppDueTotal; // remonte pour grand total
+            }
+        },
+        // ---------- CAT3 ----------
+        cat3: {
+            title: 'III - Revenus Fonciers',
+            render(){
+                const id='cat3';
+                return `
+                <div class="card panel" id="panel-${id}">
+                    <fieldset>
+                        <legend>${this.title}</legend>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th style="width:80px">Ligne</th>
+                                <th>Libellé</th>
+                                <th>Revenu net imposable</th>
+                                <th>Charges déductibles</th>
+                                <th>Revenu imposable</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            ${[
+                                {code:'LINE20',label:'Revenus locatifs nets'},
+                                {code:'LINE21',label:'Charges déductibles (entretien, réparations)'},
+                                {code:'LINE22',label:'Autres revenus fonciers'},
+                            ].map((r,i)=>`
+                                    <tr>
+                                    <td>${r.code}</td>
+                                    <td style="text-align:left">${r.label}</td>
+                                    <td><input type="number" class="c3-net" value="0"></td>
+                                    <td><input type="number" class="c3-charges" value="0"></td>
+                                    <td class="c3-tax">0</td>
+                                    </tr>
+                            `).join('')}
+                            </tbody>
+                        </table>
+                    </fieldset>
+
+                    <div class="summary">
+                        <div class="box">
+                            <div><b>Récap – Revenu net imposable</b></div>
+                            <div id="c3-sum-net">0</div>
+                        </div>
+                        <div class="box">
+                            <div><b>Charges déductibles</b></div>
+                            <div id="c3-sum-charges">0</div>
+                        </div>
+                        <div class="box">
+                            <div><b>Revenu imposable</b></div>
+                            <div id="c3-sum-tax">0</div>
+                        </div>
+                    </div>
+                </div>`;
+            },
+            compute(panel){
+                let sumNet=0, sumCharges=0, sumTax=0;
+                const rows = panel.querySelectorAll('tbody tr');
+                rows.forEach(tr=>{
+                    const net = toNum(tr.querySelector('.c3-net').value);
+                    const charges = toNum(tr.querySelector('.c3-charges').value);
+                    const tax = Math.max(net - charges, 0); // logique propre Cat3
+                    tr.querySelector('.c3-tax').textContent = fmt(tax);
+                    sumNet += net; sumCharges += charges; sumTax += tax;
+                });
+                panel.querySelector('#c3-sum-net').textContent = fmt(sumNet);
+                panel.querySelector('#c3-sum-charges').textContent  = fmt(sumCharges);
+                panel.querySelector('#c3-sum-tax').textContent  = fmt(sumTax);
+                return sumTax; // renvoyé pour le grand total
+            }
+        },
+        // ---------- CAT4 ----------
+        cat4: {
+            title: 'IV - Bénéfices des Activités Artisanales, Industrielles, Commerciales et Assimilées',
+            render(){
+                const id='cat4';
+                return `
+                <div class="card panel" id="panel-${id}">
+                    <fieldset>
+                        <legend>${this.title}</legend>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th style="width:80px">Ligne</th>
+                                <th>Libellé</th>
+                                <th>Chiffre d'affaires</th>
+                                <th>Charges déductibles</th>
+                                <th>Bénéfice imposable</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            ${[
+                                {code:'LINE30',label:'Chiffre d’affaires brut'},
+                                {code:'LINE31',label:'Charges déductibles (achats, frais généraux)'},
+                                {code:'LINE32',label:'Bénéfice net imposable'},
+                            ].map((r,i)=>`
+                                    <tr>
+                                    <td>${r.code}</td>
+                                    <td style="text-align:left">${r.label}</td>
+                                    <td><input type="number" class="c4-revenue" value="0"></td>
+                                    <td><input type="number" class="c4-charges" value="0"></td>
+                                    <td class="c4-tax">0</td>
+                                    </tr>
+                            `).join('')}
+                            </tbody>
+                        </table>
+                    </fieldset>
+
+                    <div class="summary">
+                        <div class="box">
+                            <div><b>Récap – Chiffre d'affaires brut</b></div>
+                            <div id="c4-sum-revenue">0</div>
+                        </div>
+                        <div class="box">
+                            <div><b>Charges déductibles</b></div>
+                            <div id="c4-sum-charges">0</div>
+                        </div>
+                        <div class="box">
+                            <div><b>Bénéfice imposable</b></div>
+                            <div id="c4-sum-tax">0</div>
+                        </div>
+                    </div>
+                </div>`;
+            },
+            compute(panel){
+                let sumRevenue=0, sumCharges=0, sumTax=0;
+                const rows = panel.querySelectorAll('tbody tr');
+                rows.forEach(tr=>{
+                    const revenue = toNum(tr.querySelector('.c4-revenue').value);
+                    const charges = toNum(tr.querySelector('.c4-charges').value);
+                    const tax = Math.max(revenue - charges, 0); // logique propre Cat4
+                    tr.querySelector('.c4-tax').textContent = fmt(tax);
+                    sumRevenue += revenue; sumCharges += charges; sumTax += tax;
+                });
+                panel.querySelector('#c4-sum-revenue').textContent = fmt(sumRevenue);
+                panel.querySelector('#c4-sum-charges').textContent  = fmt(sumCharges);
+                panel.querySelector('#c4-sum-tax').textContent  = fmt(sumTax);
+                return sumTax; // renvoyé pour le grand total
+            }
+        },
+    };
+
+    // ---------- montage dynamique depuis la sélection ----------
+    const selected = JSON.parse(sessionStorage.getItem('selectedCategories')||'[]');
+    const tabs = document.getElementById('tabs');
+    const panels = document.getElementById('panels');
+
+    if (!selected.length) {
+      // fallback si accès direct
+      tabs.innerHTML = '<div class="tab">Aucune catégorie sélectionnée. <a href="select.html">Revenir</a></div>';
+    } else {
+      // Crée onglets + panneaux
+      selected.forEach((id, idx)=>{
+        const cat = Catalog[id];
+        if (!cat) return;
+        const t = document.createElement('button');
+        t.className = 'tab'+(idx===0?' active':'');
+        t.textContent = cat.title;
+        t.dataset.target = 'panel-'+id;
+        tabs.appendChild(t);
+
+        panels.insertAdjacentHTML('beforeend', cat.render());
+        panels.lastElementChild.classList.toggle('active', idx===0);
+      });
+
+      // navigation tabs
+      tabs.addEventListener('click', (e)=>{
+        const btn = e.target.closest('.tab'); if (!btn) return;
+        document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.target).classList.add('active');
+      });
+
+      // calcul global (écoute tous les inputs)
+      const recalcAll = ()=>{
+        let grand = 0;
+        selected.forEach(id=>{
+          const cat = Catalog[id];
+          const panel = document.getElementById('panel-'+id);
+          if (cat && panel) grand += cat.compute(panel);
+        });
+        document.getElementById('grandTotal').textContent = fmt(grand);
+      };
+      document.addEventListener('input', recalcAll);
+      // 1er calcul au chargement
+      recalcAll();
+    }
+
+    // "Enregistrer" = exemple : sauvegarde JSON dans sessionStorage (à brancher selon besoin)
+    document.getElementById('save').onclick = ()=>{
+      const payload = { when: new Date().toISOString(), categories: selected };
+      sessionStorage.setItem('irpp_last_save', JSON.stringify(payload));
+      alert('Brouillon enregistré.');
+    };
+  </script>
+</body>
+</html>

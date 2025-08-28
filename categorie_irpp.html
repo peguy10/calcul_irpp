@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>IRPP – Sélection des catégories</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --brand:#f5a623;
+      --ink:#1f2937;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --bg:#f9fafb;
+      --card:#ffffff;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);margin:0;color:var(--ink)}
+    .wrap{max-width:980px;margin:32px auto;padding:0 16px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .logo{width:28px;height:28px;border-radius:6px;background:var(--brand)}
+    h1{font-size:22px;margin:0}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+    .grid{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:12px;padding:16px}
+    @media(min-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .item{padding:14px;border:1px solid var(--line);border-radius:10px;display:flex;align-items:flex-start;gap:10px;background:#fff}
+    .item input{margin-top:3px}
+    .item b{display:block;margin-bottom:4px}
+    .actions{display:flex;justify-content:flex-end;padding:16px;border-top:1px solid var(--line);gap:8px}
+    button{appearance:none;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:600}
+    .next{background:var(--brand);color:#fff}
+    .muted{background:#eef2ff;color:#374151}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo"></div>
+      <h1>Déclaration IRPP – Sélectionner les catégories</h1>
+    </header>
+
+    <div class="card">
+      <div class="grid" id="categories"></div>
+      <div class="actions">
+        <button class="muted" type="button" id="selectAll">Tout sélectionner</button>
+        <button class="next" type="button" id="go">Suivant →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>      
+    // voici mes 11 categries 
+    // I - Traitements, Salaires, Pensions et Rentes Viagères
+    // II - Revenus de Capitaux Mobiliers
+    // III - Revenus Fonciers
+    // IV - Bénéfices des Activités Artisanales, Industrielles, Commerciales et Assimilées
+    // V - Bénéfices Agricoles
+    // VI - Bénéfices des Professions Non Commerciales
+    // VII - Revenus Non Commerciaux
+    // VIII - Revenus perçus ou obtenus à l'étranger
+    // IX - Taxe sur la Propriété Foncière
+    // X - Taxe Spéciale sur le revenu
+    // XI - Impôts retenus sur les traitements, salaires, pensions et rentes
+    const DATA = [
+        { id: 'cat1', label: 'I – Traitements, Salaires, Pensions et Rentes Viagères' },
+        { id: 'cat2', label: 'II – Revenus de Capitaux Mobiliers' },
+        { id: 'cat3', label: 'III - Revenus Fonciers'},
+        { id: 'cat4', label: 'IV - Bénéfices des Activités Artisanales, Industrielles, Commerciales et Assimilées' },
+        { id: 'cat5', label: 'V - Bénéfices Agricoles' },
+        { id: 'cat6', label: 'VI - Bénéfices des Professions Non Commerciales' },
+        { id: 'cat7', label: 'VII - Revenus Non Commerciaux' },
+        { id: 'cat8', label: 'VIII - Revenus perçus ou obtenus à l\'étranger' },
+        { id: 'cat9', label: 'IX - Taxe sur la Propriété Foncière' },
+        { id: 'cat10', label: 'X - Taxe Spéciale sur le revenu' },
+        { id: 'cat11', label: 'XI - Impôts retenus sur les traitements, salaires, pensions et rentes' }
+
+
+
+    ];
+
+    const box = document.getElementById('categories');
+    DATA.forEach(c => {
+      const el = document.createElement('label');
+      el.className = 'item';
+      el.innerHTML = `
+        <input type="checkbox" value="${c.id}">
+        <div><b>${c.label}</b><small class="muted">Inclure ce formulaire dans le calcul</small></div>
+      `;
+      box.appendChild(el);
+    });
+
+    document.getElementById('selectAll').onclick = () => {
+      box.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+    };
+
+    document.getElementById('go').onclick = () => {
+      const selected = [...box.querySelectorAll('input:checked')].map(cb => cb.value);
+      if (!selected.length) { alert('Sélectionne au moins une catégorie.'); return; }
+      sessionStorage.setItem('selectedCategories', JSON.stringify(selected));
+      location.href = 'calcul_irpp.html';
+    };
+
+    // Précocher la sélection précédente si on revient en arrière
+    const prev = JSON.parse(sessionStorage.getItem('selectedCategories') || '[]');
+    if (prev.length) {
+      box.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = prev.includes(cb.value));
+    }
+  </script>
+</body>
+</html>
