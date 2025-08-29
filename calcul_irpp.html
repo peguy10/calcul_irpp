@@ -23,7 +23,7 @@
     .tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin:10px 0 18px}
     .tab{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:600;cursor:pointer}
     .tab.active{background:var(--accent);border-color:#f6c375}
-    .panel{display:none}
+    .panel{display:none; width: 100%;overflow-x: auto;-webkit-overflow-scrolling: touch;}
     .panel.active{display:block}
     .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.04);padding:12px}
     fieldset{border:0;margin:14px 0 8px;padding:0}
@@ -31,7 +31,7 @@
     table{width:100%;border-collapse:collapse;margin-top:10px}
     th,td{border:1px solid var(--line);padding:8px;text-align:center}
     th{background:#fcfcfc}
-    input[type=number]{width:140px;padding:6px;border:1px solid var(--line);border-radius:8px}
+    input[type=number], input[type=text], select{background-color: #ffffff; width:140px;padding:6px;border:1px solid var(--line);border-radius:8px}
     .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
     .summary .box{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}
     .footer{display:flex;justify-content:space-between;gap:10px;margin-top:16px}
@@ -417,6 +417,199 @@
                 return sumTax; // renvoyé pour le grand total
             }
         },
+        // ---------- CAT9 ----------    
+        cat9: {
+            title: 'IX - Taxes sur la propriété foncière',
+            render(){
+                const id='cat9';
+                return `
+                <div class="card panel" id="panel-${id}">
+                    <fieldset>
+                        <legend>${this.title}</legend>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Immeuble</th>
+                                <th>Ville</th>
+                                <th>Commune</th>
+                                <th>Quartier</th>
+                                <th>Lieu-dit</th>
+                                <th>N° Titre foncier</th>
+                                <th>Superficie Terrain M²</th>
+                                <th>Superficie Construction M²</th>
+                                <th>Valeur Terrain</th>
+                                <th>Valeur Construction</th>
+                                <th>Valeur Imposable</th>
+                            </tr>
+                            </thead>
+                            <tbody id = "table-body">
+                                <th>Immeuble N</th>
+                                <td><input type="text"></td>
+                                <td>
+                                    <select class="communeSelect">
+                                    </select>
+                                </td>
+                                <td><input type="text"></td>
+                                <td><input type="text"></td>
+                                <td><input type="number" min='0'></td>
+                                <td><input type="number"min='0'></td>
+                                <td><input type="number"min='0'></td>
+                                <td><input type="number" min='0' class="c9-land"></td>
+                                <td><input type="number" min='0' class="c9-build"></td>
+                                <td class="c9-taxable">0</td>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="10" style="text-align:left">TOTAL</th>
+                                    <th>0</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </fieldset>
+
+                    <fieldset>
+                    <legend>Recapitulatif de la taxe foncière</legend>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Montant Retenu/Déjà Payé</th>
+                                <th>Principal</th>
+                                <th>CAC</th>
+                                <th>Pénalités</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${[
+                                {label:'IRPP sur TPF dû'},
+                                {label:'TPF Déjà Payé ou Complémentaire'},
+                                {label:'Taxe foncière à payer'},
+                            ].map((r,i)=>`
+                                    <tr>
+                                    <th>${r.label}</th>
+                                    <td> ${i === 1 ? `<input type="text" value="0">` : ``}</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    </tr>
+                            `).join('')}
+                            </tbody>
+                </div>`;
+            },
+            compute(panel){
+                // creation dynamique de la liste des communes
+                function commune() {
+                    const communes = [
+                                            "Ngaoundal", "Tibati", "Galim-Tignere", "Kontcha", "Mayo Baleo", "Tignere",
+                                            "Bankim", "Banyo", "Mayo-Darle", "Dir", "Diohong", "Meiganga", "Ngaoui",
+                                            "Belel", "Martap", "Mbe", "Noanha", "Ngaoundere", "Ngaoundere I", "Ngaoundere II",
+                                            "Ngaoundere III", "Nyambaka", "Mbanjock", "Nanga-Eboko", "Bibey", "Minta",
+                                            "Lembe - Yezoum", "Nkoteng", "Nsem", "Batsenga", "Lig Myomo", "Bebeda",
+                                            "Evodoula", "Lobo", "Obala", "Okola", "Saya", "Bafia", "Bokito", "Deuk",
+                                            "Kiki", "Kon-Yambetta", "Makenene", "Ndikinimeki", "Nitoukou", "Ombessa",
+                                            "Ntui", "Mbangassina", "Ngambe Tikar", "Nooro", "Yokodee Yokoo Coco", "Avare",
+                                            "Edzendoujan", "Esse", "Mfou", "Nkolafamba", "Olanguina", "Soa", "Afanloum",
+                                            "Mbankomo", "Ngoumou", "Bikok", "Akono", "Yaounde", "Yaounde I", "Yaounde II",
+                                            "Yaounde III", "Yaounde IV", "Yaounde V", "Yaounde VI", "Yaounde VII", "Bot-Makak",
+                                            "Bondock", "Biyoujia", "Diiban", "Eseka", "Makak", "Matom", "Ngog-Mapubi",
+                                            "Nguibassal", "Messondo", "Akoeman", "Dzeng", "Mbalmayo", "Mengueme", "Nkolmetet",
+                                            "Noomedzap", "Akonolinga", "Ayos", "Endom", "Kobdombo", "Mengang", "Gari-Gombo",
+                                            "Moloundou", "Salapoumbe", "Yokadouma", "Abong-Mbang", "Angossas", "Atok",
+                                            "Doumaintang", "Lomie", "Messamena", "Mboma", "Messok", "Mindourou", "Ngoyla",
+                                            "Nguelemendouka", "Somalomo", "Batouri", "Kette", "Kentzou", "Mbang", "Noellele",
+                                            "Nguelebock", "Ouli", "Belabo", "Bertoua", "Bertoua 1er", "Bertoua 2er",
+                                            "Betare-Oya", "Diang", "Garoua-Boulai", "Mandiou", "Nooura", "Maroua", "Bogo",
+                                            "Dargala", "Gazawa", "Maroua Ier", "Maroua 2E", "Maroua 3E", "Meri", "Ndoukoula",
+                                            "Pette", "Blancoua", "Darak", "Fotokol", "Goulfey", "Hile-Alifa", "Kousseri",
+                                            "Logone-Birni", "Makary", "Waza", "Zina", "Datcheka", "Gobo", "Guere", "Gueme (Vele)",
+                                            "Kai-Kai", "Kalfou", "Kar-Hay (Doukoula)", "Maga", "Tchatibali", "Wina", "Yagoua",
+                                            "Dziguilao", "Guidiguis", "Kaele", "Mindif", "Moulvoudaye", "Moutourwa", "Touloum",
+                                            "Kolofata", "Mora", "Tokombere", "Bourrha", "Hina", "Koza", "Mogode", "Mokolo",
+                                            "Mozogo", "Souleda Roua", "Nkongsamba", "Bare", "Bonelea", "Dirombari", "Ebone",
+                                            "Loum", "Manjo", "Mbanga", "Melong", "Mombo", "Nkongsamba I°", "Nkongsamba 2°",
+                                            "Nkongsamba 3°", "Njombe-Penja", "Ndobian", "Nkondjock", "Yabassi", "Yingui",
+                                            "Edea", "Dibamba", "Dizangue", "Edea I°", "Edea 2°", "Massock", "Mouanko", "Njom",
+                                            "Nyanon", "Ngambe", "Nowei Makondo", "Pouma", "Douala I°", "Douala 2ème", "Douala 3ème",
+                                            "Douala 4e", "Douala 5e", "Douala", "Manoka", "Garoua", "Bascheo", "Bibemi", "Dembo",
+                                            "Garoua I°", "Garoua 2e", "Garoua 3e", "Gaschiga", "Lagdo", "Mayo-Hourna", "Noong",
+                                            "Pitoa", "Touroa", "Beka", "Poli", "Figuil", "Guider", "Mayo-Oulo", "Madingring",
+                                            "Rey-Boura", "Tchollire", "Touboro", "Elak Oku", "Jakiri", "Kumbo", "Nkum", "Mbiame",
+                                            "Nkor", "Belo", "Fonfuka", "Fundong", "Njinikom", "Ako", "Misaje", "Ndu", "Nkambe",
+                                            "Nwa", "Benakuma", "Furu-Awa", "Wum", "Zhoa", "Bamenda", "Bafut", "Bali", "Bamenda I°",
+                                            "Bamenda 2°", "Bamenda 3°", "Santa", "Tubah", "Andek", "Batibo", "Mbengwi", "Njikwa",
+                                            "Widikum-Boffe", "Babessi", "Balikumbat", "Ndop", "Babadjou", "Batcham", "Galim",
+                                            "Mbouda", "Bafang", "Banka", "Bakou", "Bana", "Bandja", "Banwa", "Kerem", "Bailam",
+                                            "Bamendjou", "Bangou", "Batie", "Bayangam", "Demdeng", "Pete-Banddoun", "Dschang",
+                                            "Fokoue", "Fongo-Tongo", "Nkong-Nzem", "Penka-Michel", "Santchou", "Bafoussam",
+                                            "Bafoussam 1er", "Bafoussam 2er", "Bafoussam 3er", "Bangangte", "Bassamba", "Bazou",
+                                            "Tonga", "Bangourain", "Foumban", "Foumbot", "Kolopfamo", "Koutaba", "Magba", "Malantouen",
+                                            "Massangam", "Nimom", "Bengbis", "Dijoum", "Sangmellma", "Meyomessi", "Mintom", "Oveng",
+                                            "Meyomessala", "Zoetele", "Ebolowa", "Biwong-Bane", "Biwong-Bulu", "Ebolowa Ier",
+                                            "Ebolowa IIe", "Ebolowa IIIeme", "Efoulan", "Mengong", "Mvangan", "Nooulema", "Kribi",
+                                            "Akom II", "Bipindi", "Campo", "Kribi Ier", "Kribi 2E", "Lokoundie", "Lolodorf", "Mvengue",
+                                            "Niete", "Ambam", "Kye-Ossi", "Mayan", "Olamze", "Limbe", "Buea", "Limbe 1er", "Limbe 2er",
+                                            "Limbe 3er", "Idenau", "Muyuka", "Tiko", "Bangem", "Nguti", "Tombel", "Alou", "Menji",
+                                            "Wabane", "Akwaya", "Eyumodjock", "Mamfe", "Tinto", "Kumba", "Konye", "Kumba I°", "Kumba 2°",
+                                            "Kumba 3°", "Mbon", "Bamusso", "Dikome-Balue", "Ekondo-Titi", "Idabato", "Isangeele",
+                                            "Kombo-Abedimo", "Kombo-Itindi", "Mundemba", "Toko"
+                                ]
+                    communes.sort();
+                    function populateCommunes(selectElement) {
+                        communes.forEach(commune => {
+                            const option = document.createElement("option");
+                            option.value = commune;
+                            option.textContent = commune;
+                            selectElement.appendChild(option);
+                        });
+                    }
+                    const select = document.getElementsByClassName('communeSelect')[0];
+                    populateCommunes(select);
+                }
+                commune();
+
+                // Ajouter une nouvelle ligne dans le tableau
+                const tbody = document.getElementById('table-body');
+                lastRow = tbody.lastChild;
+                inputs = lastRow.querySelectorAll('td input');
+                const tr = `
+                                    <th>Immeuble N</th>
+                                    <td><input type="text"></td>
+                                    <td>
+                                        <select class="communeSelect">
+                                        </select>
+                                    </td>
+                                    <td><input type="text"></td>
+                                    <td><input type="text"></td>
+                                    <td><input type="number" min='0'></td>
+                                    <td><input type="number"min='0'></td>
+                                    <td><input type="number"min='0'></td>
+                                    <td><input type="number" min='0' class="c9-land"></td>
+                                    <td><input type="number" min='0' class="c9-build"></td>
+                                    <td class="c9-taxable">0</td>
+                `;
+                function addRow(row) {
+                    const line = document.createElement('tr');
+                    line.innerHTML = row;
+                    tbody.appendChild(line);
+                }
+                
+                // Calcul dynamique de la valeur imposable
+                function taxable() {
+                    land = document.getElementsByClassName('c9-land')[0].value || 0;
+                    build = document.getElementsByClassName('c9-build')[0].value || 0;
+                    tax = document.getElementsByClassName('c9-taxable')[0];
+                    function computeTax(land, build, tax) {
+                        tax.textContent = parseFloat(land) + parseFloat(build);
+                    }
+                    land.addEventListener('input', computeTax(land,build,tax));
+                    build.addEventListener('input', computeTax(land,build,tax));
+                }
+                taxable();
+            }
+        },
+        
     };
 
     // ---------- montage dynamique depuis la sélection ----------
