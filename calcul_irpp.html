@@ -420,87 +420,122 @@
         // ---------- CAT9 ----------    
         cat9: {
             title: 'IX - Taxes sur la propriété foncière',
-            render(){
-                const id='cat9';
+            render() {
+                const id = 'cat9';
                 return `
                 <div class="card panel" id="panel-${id}">
                     <fieldset>
                         <legend>${this.title}</legend>
                         <table>
                             <thead>
-                            <tr>
-                                <th>Immeuble</th>
-                                <th>Ville</th>
-                                <th>Commune</th>
-                                <th>Quartier</th>
-                                <th>Lieu-dit</th>
-                                <th>N° Titre foncier</th>
-                                <th>Superficie Terrain M²</th>
-                                <th>Superficie Construction M²</th>
-                                <th>Valeur Terrain</th>
-                                <th>Valeur Construction</th>
-                                <th>Valeur Imposable</th>
-                            </tr>
+                                <tr>
+                                    <th>Immeuble</th>
+                                    <th>Ville</th>
+                                    <th>Commune</th>
+                                    <th>Quartier</th>
+                                    <th>Lieu-dit</th>
+                                    <th>N° Titre foncier</th>
+                                    <th>Superficie Terrain M²</th>
+                                    <th>Superficie Construction M²</th>
+                                    <th>Valeur Terrain</th>
+                                    <th>Valeur Construction</th>
+                                    <th>Valeur Imposable</th>
+                                </tr>
                             </thead>
-                            <tbody id = "table-body">
-                                <th>Immeuble N</th>
-                                <td><input type="text"></td>
-                                <td>
-                                    <select class="communeSelect">
-                                    </select>
-                                </td>
-                                <td><input type="text"></td>
-                                <td><input type="text"></td>
-                                <td><input type="number" min='0'></td>
-                                <td><input type="number"min='0'></td>
-                                <td><input type="number"min='0'></td>
-                                <td><input type="number" min='0' class="c9-land"></td>
-                                <td><input type="number" min='0' class="c9-build"></td>
-                                <td class="c9-taxable">0</td>
-                            </tbody>
+                            <tbody id="table-body"></tbody>
                             <tfoot>
                                 <tr>
                                     <th colspan="10" style="text-align:left">TOTAL</th>
-                                    <th>0</th>
+                                    <th id="c9-total">0</th>
                                 </tr>
                             </tfoot>
                         </table>
                     </fieldset>
 
                     <fieldset>
-                    <legend>Recapitulatif de la taxe foncière</legend>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Montant Retenu/Déjà Payé</th>
-                                <th>Principal</th>
-                                <th>CAC</th>
-                                <th>Pénalités</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${[
-                                {label:'IRPP sur TPF dû'},
-                                {label:'TPF Déjà Payé ou Complémentaire'},
-                                {label:'Taxe foncière à payer'},
-                            ].map((r,i)=>`
+                        <legend>Recapitulatif de la taxe foncière</legend>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Montant Retenu/Déjà Payé</th>
+                                    <th>Principal</th>
+                                    <th>CAC</th>
+                                    <th>Pénalités</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${[
+                                    {label:'IRPP sur TPF dû'},
+                                    {label:'TPF Déjà Payé ou Complémentaire'},
+                                    {label:'Taxe foncière à payer'},
+                                ].map((r,i)=>`
                                     <tr>
-                                    <th>${r.label}</th>
-                                    <td> ${i === 1 ? `<input type="text" value="0">` : ``}</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
+                                        <th>${r.label}</th>
+                                        <td>${i === 1 ? `<input type="text" value="0">` : ``}</td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
                                     </tr>
-                            `).join('')}
+                                `).join('')}
                             </tbody>
+                        </table>
+                    </fieldset>
                 </div>`;
             },
-            compute(panel){
-                // creation dynamique de la liste des communes
-                function commune() {
+            init(panel) {
+                const tbody = document.getElementById('table-body');
+
+                const tr = `
+                    <th>Immeuble N</th>
+                    <td><input type="text"></td>
+                    <td>
+                        <select class="communeSelect"></select>
+                    </td>
+                    <td><input type="text"></td>
+                    <td><input type="text"></td>
+                    <td><input type="number" min="0"></td>
+                    <td><input type="number" min="0"></td>
+                    <td><input type="number" min="0"></td>
+                    <td><input type="number" min="0" class="c9-land"></td>
+                    <td><input type="number" min="0" class="c9-build"></td>
+                    <td class="c9-taxable">0</td>
+                `;
+
+                function addRow(row) {
+                    const line = document.createElement('tr');
+                    line.innerHTML = row;
+                    tbody.appendChild(line);
+                    return line;
+                }
+
+                // verifier si il y a des lignes avant d'ajouter une nouvelle
+                let newRow;
+                if (tbody.children.length === 0) {
+                    newRow = addRow(tr);
+                }
+
+                function allFilled(row) {
+                    const inputs = row.querySelectorAll('input, select');
+                    for (let input of inputs) {
+                        if (input.value.trim() === '') {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+                tbody.addEventListener('input', (e) => {
+                    const row = e.target.closest('tr');
+                    if (allFilled(row)) {
+                        newRow = addRow(tr);
+                        commune(newRow.querySelector('.communeSelect'));
+                    }
+                    computeTaxes();
+                });
+                // Remplir la liste des communes
+                function commune(selectElement) {
                     const communes = [
                                             "Ngaoundal", "Tibati", "Galim-Tignere", "Kontcha", "Mayo Baleo", "Tignere",
                                             "Bankim", "Banyo", "Mayo-Darle", "Dir", "Diohong", "Meiganga", "Ngaoui",
@@ -556,59 +591,147 @@
                                             "Kombo-Abedimo", "Kombo-Itindi", "Mundemba", "Toko"
                                 ]
                     communes.sort();
-                    function populateCommunes(selectElement) {
-                        communes.forEach(commune => {
-                            const option = document.createElement("option");
-                            option.value = commune;
-                            option.textContent = commune;
-                            selectElement.appendChild(option);
-                        });
-                    }
-                    const select = document.getElementsByClassName('communeSelect')[0];
-                    populateCommunes(select);
+                    communes.forEach(commune => {
+                        const option = document.createElement("option");
+                        option.value = commune;
+                        option.textContent = commune;
+                        selectElement.appendChild(option);
+                    });
                 }
-                commune();
 
-                // Ajouter une nouvelle ligne dans le tableau
-                const tbody = document.getElementById('table-body');
-                lastRow = tbody.lastChild;
-                inputs = lastRow.querySelectorAll('td input');
-                const tr = `
-                                    <th>Immeuble N</th>
-                                    <td><input type="text"></td>
-                                    <td>
-                                        <select class="communeSelect">
-                                        </select>
-                                    </td>
-                                    <td><input type="text"></td>
-                                    <td><input type="text"></td>
-                                    <td><input type="number" min='0'></td>
-                                    <td><input type="number"min='0'></td>
-                                    <td><input type="number"min='0'></td>
-                                    <td><input type="number" min='0' class="c9-land"></td>
-                                    <td><input type="number" min='0' class="c9-build"></td>
-                                    <td class="c9-taxable">0</td>
-                `;
-                function addRow(row) {
-                    const line = document.createElement('tr');
-                    line.innerHTML = row;
-                    tbody.appendChild(line);
-                }
-                
-                // Calcul dynamique de la valeur imposable
-                function taxable() {
-                    land = document.getElementsByClassName('c9-land')[0].value || 0;
-                    build = document.getElementsByClassName('c9-build')[0].value || 0;
-                    tax = document.getElementsByClassName('c9-taxable')[0];
-                    function computeTax(land, build, tax) {
-                        tax.textContent = parseFloat(land) + parseFloat(build);
+                // remplir le select de la nouvelle ligne
+                const select = newRow.querySelector(".communeSelect");
+                commune(select);
+
+                // Calcul de la valeur imposable
+                function taxable(row) {
+                    const landInput = row.querySelector(".c9-land");
+                    const buildInput = row.querySelector(".c9-build");
+                    const taxCell = row.querySelector(".c9-taxable");
+
+                    function computeTax() {
+                        const landVal = parseFloat(landInput.value) || 0;
+                        const buildVal = parseFloat(buildInput.value) || 0;
+                        taxCell.textContent = landVal + buildVal;
                     }
-                    land.addEventListener('input', computeTax(land,build,tax));
-                    build.addEventListener('input', computeTax(land,build,tax));
+
+                    landInput.addEventListener("input", computeTax);
+                    buildInput.addEventListener("input", computeTax);
                 }
-                taxable();
+
+                taxable(newRow);
+            },
+            compute(panel) {
+                
+            }
+            
+        },
+        // ---------- CAT10 ----------
+        cat10: {
+            title: 'X - Taxe Spéciale sur le revenu ( Rémunérations que vous avez versées à des personnes non domiciliées au Cameroun)',
+            render(){
+                const id='cat10';
+                return `
+                <div class="card panel" id="panel-${id}">
+                    <fieldset>
+                        <legend>${this.title}</legend>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th></th>
+                                <th></th>
+                                <th>Revenu brut imposable</th>
+                                <th>Taux (%)</th>
+                                <th>Principal</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            ${[
+                                {code:'LINE153',label:'TSR retenue à 15%',taux:15},
+                                {code:'LINE154',label:'TSR retenue à 10%',taux:10},
+                                {code:'LINE155',label:'TSR retenue à 7.5%',taux:7.5},
+                                {code:'LINE156',label:'TSR retenue à 3%',taux:3},
+                            ].map((r,i)=>`
+                                    <tr>
+                                        <td>${r.code}</td>
+                                        <th style="text-align:left">${r.label}</th>
+                                        <td><input type="number" class="c10-revenue" min="0" value="0"></td>
+                                        <th class="c10-taux">${r.taux}</th>
+                                        <td class="c10-tax">0</td>
+                                    </tr>
+                            `).join('')}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="2" style="text-align:right">TOTAL</th>
+                                    <th id="c10-taxable-total">0</th>
+                                    <th></th>
+                                    <th id="c10-total1">0</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </fieldset>
+                    <fieldset>
+                        <legend>TSR à payer</legend>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th></th>
+                                <th>Montant retenu/déjà payé</th>
+                                <th>Principal</th>
+                                <th>CAC</th>
+                                <th>Penalités</th>
+                                <th>Total</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            ${[
+                                {code:1,label:'IRPP sur TSR dû'},
+                                {code:2,label:'TSR déjà payée'},
+                                {code:3,label:'IRPP sur TSR à payer'},
+                            ].map((r,i)=>`
+                                    <tr>
+                                    <th style="text-align:left">${r.label}</th>
+                                    <td>${(r.code === 2) ? '<input type="number" min="0" value="0">' : ''}</td>
+                                    <td class="c10-principal">0</td>
+                                    <td class="c10-cac">0</td>
+                                    <td class="c10-pen"></td>
+                                    <td class="c10-total2">0</td>
+                                    </tr>
+                            `).join('')}
+                            </tbody>
+                        </table>
+                    </fieldset>
+                </div>`;
+            },
+            compute(panel){
+                const taxes = panel.querySelectorAll('.c10-tax');
+                const revenues = panel.querySelectorAll('.c10-revenue');
+                const tauxs = panel.querySelectorAll('.c10-taux');
+                let totalRevenue = 0, totalTax = 0;
+                taxes.forEach((cell, i)=>{
+                    const revenue = toNum(revenues[i].value);
+                    const taux = toNum(tauxs[i].textContent);
+                    const tax = revenue * (taux/100); // logique propre Cat10
+                    cell.textContent = fmt(tax);
+                    totalRevenue += revenue;
+                    totalTax += tax;
+                });
+                panel.querySelector('#c10-taxable-total').textContent = fmt(totalRevenue);
+                panel.querySelector('#c10-total1').textContent = fmt(totalTax);
+                // Bloc TSR à payer
+                // IRPP dû = total principal (on ventile dans la 1ère ligne du bloc)
+                panel.querySelector('.c10-principal').textContent = fmt(totalTax);
+                panel.querySelector('.c10-cac').textContent = fmt(0);
+                panel.querySelector('.c10-pen').textContent = fmt(0);
+                const irppDueTotal = totalTax;
+                panel.querySelector('.c10-total2').textContent = fmt(irppDueTotal);
+                return irppDueTotal; // remonte pour grand total
+                
+
             }
         },
+        
         
     };
 
@@ -616,7 +739,7 @@
     const selected = JSON.parse(sessionStorage.getItem('selectedCategories')||'[]');
     const tabs = document.getElementById('tabs');
     const panels = document.getElementById('panels');
-
+    
     if (!selected.length) {
       // fallback si accès direct
       tabs.innerHTML = '<div class="tab">Aucune catégorie sélectionnée. <a href="select.html">Revenir</a></div>';
