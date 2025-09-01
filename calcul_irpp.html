@@ -66,7 +66,7 @@
 
   <script>
     // -------- utilitaires --------
-    const toNum = v => isNaN(parseFloat(v)) ? 0 : parseFloat(v);
+    const toNum = v => parseFloat(String(v).replace(",", ".").replace(/\s+/g, "")) || 0;
     const fmt = n => new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2}).format(n);
 
     // --------- templates par catégorie (HTML + calcul spécifique) ---------
@@ -692,7 +692,7 @@
                             ].map((r,i)=>`
                                     <tr>
                                     <th style="text-align:left">${r.label}</th>
-                                    <td>${(r.code === 2) ? '<input type="number" min="0" value="0">' : ''}</td>
+                                    <td>${(r.code === 2) ? '<input type="number" min="0" value="0" class="c10-paid">' : ''}</td>
                                     <td class="c10-principal">0</td>
                                     <td class="c10-cac">0</td>
                                     <td class="c10-pen"></td>
@@ -715,20 +715,34 @@
                     const tax = revenue * (taux/100); // logique propre Cat10
                     cell.textContent = fmt(tax);
                     totalRevenue += revenue;
-                    totalTax += tax;
+                    totalTax += tax; 
                 });
                 panel.querySelector('#c10-taxable-total').textContent = fmt(totalRevenue);
                 panel.querySelector('#c10-total1').textContent = fmt(totalTax);
-                // Bloc TSR à payer
-                // IRPP dû = total principal (on ventile dans la 1ère ligne du bloc)
-                panel.querySelector('.c10-principal').textContent = fmt(totalTax);
-                panel.querySelector('.c10-cac').textContent = fmt(0);
-                panel.querySelector('.c10-pen').textContent = fmt(0);
-                const irppDueTotal = totalTax;
-                panel.querySelector('.c10-total2').textContent = fmt(irppDueTotal);
-                return irppDueTotal; // remonte pour grand total
                 
+                // Bloc TSR à payer
+                const principalDue = panel.querySelectorAll('.c10-principal');
+                const paidInput = panel.querySelector('.c10-paid');
+                const totalDue = panel.querySelectorAll('.c10-total2');
+                const paid = toNum(0.91*paidInput.value);
+                const topay = Math.max(totalTax - paid, 0);
+                principalDue[0].textContent = fmt(totalTax); // IRPP dû
+                principalDue[1].textContent = fmt(paid); // déjà payée
+                principalDue[2].textContent = fmt(topay); // à payer
+                
+                const cac = panel.querySelectorAll('.c10-cac');
+                cac.forEach((c,i)=>c.textContent = fmt(0.1*toNum(principalDue[i].textContent)));
 
+                const pen = panel.querySelectorAll('.c10-pen');
+                const total2 = panel.querySelectorAll('.c10-total2');
+                total2.forEach((t2,i)=>{
+                    const pr = toNum(principalDue[i].textContent);
+                    const ca = toNum(cac[i].textContent);
+                    const pn = toNum(pen[i].textContent) || 0;
+                    const total = pr + ca + pn;
+                    t2.textContent = fmt(total);
+                });
+                return toNum(total2[2].textContent);
             }
         },
         
@@ -739,7 +753,6 @@
     const selected = JSON.parse(sessionStorage.getItem('selectedCategories')||'[]');
     const tabs = document.getElementById('tabs');
     const panels = document.getElementById('panels');
-    
     if (!selected.length) {
       // fallback si accès direct
       tabs.innerHTML = '<div class="tab">Aucune catégorie sélectionnée. <a href="select.html">Revenir</a></div>';
