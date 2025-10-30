@@ -16,14 +16,20 @@
     }
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);margin:0;color:var(--ink)}
-    .wrap{max-width:1100px;margin:28px auto;padding:0 16px}
+    .wrap{max-width:1200px;margin:28px auto;padding:0 16px}
     header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
     .logo{width:28px;height:28px;border-radius:6px;background:var(--brand)}
     h1{font-size:22px;margin:0}
     .tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin:10px 0 18px}
     .tab{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:600;cursor:pointer}
     .tab.active{background:var(--accent);border-color:#f6c375}
+    .tab.active.disabled-cell{background:var(--accent);border-color:#f6c375;font-weight: normal;cursor: default;color: gray;}
     .panel{display:none}
+    .autocomplete-container {position: relative; width: 120px;}
+    .autocomplete-list {position: absolute; top: 100%; left: 0; right: 0; border: 1px solid #ccc; border-top: none; max-height: 150px; overflow-y: auto; background: white; z-index: 99; display: none;}
+    .autocomplete-item {padding: 8px; cursor: pointer;}
+    .autocomplete-list {position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background: white; border: 1px solid #ccc; max-height: 200px; overflow-y: auto; display: none;}
+    .autocomplete-item:hover {background: #f0f0f0;}
     .panel.active{display:block}
     .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.04);padding:12px}
     fieldset{border:0;margin:14px 0 8px;padding:0}
@@ -287,136 +293,808 @@
                 return `
                 <div class="card panel" id="panel-${id}">
                     <fieldset>
-                        <legend>${this.title}</legend>
-                        <table>
+                        <legend>III - A. LOYERS PERÇUS</legend>
+                        <table id="loyersTable" style="min-width: 1040px; border-collapse: collapse;">
                             <thead>
-                            <tr>
-                                <th style="width:80px">Ligne</th>
-                                <th>Libellé</th>
-                                <th>Revenu net imposable</th>
-                                <th>Charges déductibles</th>
-                                <th>Revenu imposable</th>
-                            </tr>
+                                <tr>
+                                    <th>IMMEUBLE</th>
+                                    <th>VILLE</th>
+                                    <th>COMMUNE</th>
+                                    <th>QUARTIER</th>
+                                    <th>LOCALISATION</th>
+                                    <th>LOYERS PARTICULIERS</th>
+                                    <th style="width: 120px;">LOYERS PROFESSIONNELS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="loyersBody">
+                                <tr>
+                                    <td><input type="text" style="font-weight: bold; font-size: 12px; border: none;" placeholder="IMMEUBLE N"></td>
+                                    <td><input type="text" style="width: 120px; padding: 0;"></td>
+                                    <td class="autocomplete-container"><input type="text" style="width: 120px; padding: 0;" class="autocomplete-input">
+                                        <div class="autocomplete-list"></div>
+                                    </td>
+                                    <td><input type="text" style="width: 90px; padding: 0;"></td>
+                                    <td><input type="text" style="width: 120px; padding: 0;"></td>
+                                    <td><input type="number" placeholder="0" style="width: 120px; padding: 0;"></td>
+                                    <td><input type="number" placeholder="0" style="width: 120px; padding: 0;"></td>
+                                    <td class="delete-cell"></td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr class="totals">
+                                    <td colspan="5" style="text-align: left;">TOTAL DES LOYERS PERÇUS</td>
+                                    <td class="tab active disabled-cell" id="totalPart" style="text-align: left; width: 120px;">0</td>
+                                    <td class="tab active disabled-cell" id="totalPro" style="text-align: left; width: 120px;">0</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="6" style="text-align: left; font-weight: bold;">Charges forfaitaires (30%)</td>
+                                    <td class="tab active disabled-cell" id="chargesForf" style="text-align: left; width: 120px;">0</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="6" style="text-align: left; font-weight: bold;">Charges réelles justifiées</td>
+                                    <td style="text-align: center; width: 120px;"><input type="number" id="chargesReelles" placeholder="0"></td>
+                                </tr>
+                                <tr class="totals">
+                                    <td colspan="5" style="text-align: left;">Total des loyers nets</td>
+                                    <td class="tab active disabled-cell" id="totalNetPart" style="text-align: left; width: 120px;">0</td>
+                                    <td class="tab active disabled-cell" id="totalNetPro" style="text-align: left; width: 120px;">0</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <legend style="margin-top: 30px;" >III - B. PLUS-VALUES SUR CESSION IMMOBILIERS DE PARTICULIERS</legend>
+                        <table id="plusValuesTable">
+                            <thead>
+                                <tr>
+                                    <th>IMMEUBLE</th>
+                                    <th>VILLE</th>
+                                    <th>COMMUNE</th>
+                                    <th>QUARTIER</th>
+                                    <th>LOCALISATION</th>
+                                    <th>MONTANT VENDU</th>
+                                    <th>MONTANT ACQUIS</th>
+                                    <th>AUTRES CHARGES DÉDUCTIBLES À JUSTIFIER</th>
+                                    <th>MODE DE PAIEMENT</th>
+                                    <th>MONTANT DES PLUS-VALUES/MOINS-VALUES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plusValuesBody">
+                                <tr>
+                                    <td style="font-weight: bold; font-size: 12px; border: none;" >IMMEUBLE N</td>
+                                    <td><input type="text" style="width: 60px;"></td>
+                                    <td><input type="text" style="width: 90px;"></td>
+                                    <td><input type="text" style="width: 90px;"></td>
+                                    <td><input type="text" style="width: 120px;"></td>
+                                    <td><input type="number" placeholder="0" class="montantVendu" style="width: 90px;"></td>
+                                    <td><input type="number" placeholder="0" class="montantAcquis" style="width: 90px;"></td>
+                                    <td><input type="number" placeholder="0" class="autreChargeDed" style="width: 120px;"></td>
+                                    <td style="width: 90px;">
+                                        <select>
+                                            <option value="" selected disabled hidden></option>
+                                            <option value="cash">Espèces</option>
+                                            <option value="wireTransfer">Virement</option>
+                                        </select>
+                                    </td>
+                                    <td class="tab active disabled-cell montantDesPlu" style="text-align: left; width: 90px;">0</td>
+                                    <td class="delete-cell"></td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="9" style="text-align: left; font-weight: bold;">Total des plus-values sur les ventes immobilières</td>
+                                    <td class="tab active disabled-cell" style="width: 90px; text-align: left;">0</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="9" style="text-align: left; font-weight: bold;">Charges forfaitaires (30%)</td>
+                                    <td class="tab active disabled-cell" style="width: 90px; text-align: left;">0</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="9" style="text-align: left; font-weight: bold;">Charges réelles justifiées</td>
+                                    <td><input type="number" placeholder="0" style="width: 90px;"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="9" style="text-align: left; font-weight: bold;">Total des plus-values nettes</td>
+                                    <td class="tab active disabled-cell" style="text-align: left;">0</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <legend style="margin-top: 30px;" >III - C. PARTS DE PARTICIPATION ASSOCIÉES DE SOCIÉTÉS CIVILES IMMOBILIÈRES</legend>
+                        <table id="partsDeParticipation">
+                            <thead>
+                                <tr>
+                                    <th>SOCIÉTÉ CIVILE IMMOBILIÈRE (SCI)</th>
+                                    <th>NIU</th>
+                                    <th>NOM/RAISON SOCIALE</th>
+                                    <th>ADRESSE</th>
+                                    <th>PHONE NUMBER</th>
+                                    <th>REVENU BRUT DES ACTIONS PERÇUES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="partsDeParticipBody">
+                                <tr>
+                                    <td style="font-weight: bold; font-size: 12px; border: none; width: 200px;" >SCI N</td>
+                                    <td><input type="text" style="width: 90px;"></td>
+                                    <td><input type="text" style="width: 120px;"></td>
+                                    <td><input type="text" style="width: 120px;"></td>
+                                    <td><input type="text" style="width: 120px;"></td>
+                                    <td><input type="number" placeholder="0" style="width: 120px;"></td>
+                                    <td class="delete-cell"></td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="5" style="text-align: left; font-weight: bold;">TOTAL DES PARTICIPATIONS</td>
+                                    <td class="tab active disabled-cell" style="width: 120px; text-align: left;" id="totalDesParticip">0</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <legend style="margin-top: 30px;" >IRPP SUR RF À PAYER</legend>
+                        <table id="irppSurRf">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>MONTANT RETENU/DÉJÀ PAYÉ</th>
+                                    <th>PRINCIPAL</th>
+                                    <th>CAC (10%)</th>
+                                    <th>PÉNALITÉS</th>
+                                    <th>TOTAL</th>
+                                </tr>
                             </thead>
                             <tbody>
-                            ${[
-                                {code:'LINE20',label:'Revenus locatifs nets'},
-                                {code:'LINE21',label:'Charges déductibles (entretien, réparations)'},
-                                {code:'LINE22',label:'Autres revenus fonciers'},
-                            ].map((r,i)=>`
-                                    <tr>
-                                    <td>${r.code}</td>
-                                    <td style="text-align:left">${r.label}</td>
-                                    <td><input type="number" class="c3-net" value="0"></td>
-                                    <td><input type="number" class="c3-charges" value="0"></td>
-                                    <td class="c3-tax">0</td>
-                                    </tr>
-                            `).join('')}
+                                <tr>
+                                    <td style="font-weight: bold; font-size: 12px; border: none; width: 200px; background: #fcfcfc;" >IRPP dû sur RF loyers au taux libératoire (10%)</td>
+                                    <td style="width: 120px; border: none"></td>
+                                    <td class="tab active disabled-cell" id="tauxLiberatoirPrincipal" style="width: 120px;"></td>
+                                    <td class="tab active disabled-cell" style="width: 60px;"><input type="number" class="tab active disabled-cell" id="tauxLiberatoirCac" style="width: 60px; border: none;"></td>
+                                    <td class="tab active disabled-cell" id="tauxLiberatoirPenalites" style="width: 120px;"></td>
+                                    <td class="tab active disabled-cell" id="tauxLiberatoirTotal" style="width: 120px;"></td>
+                                </tr>
+                                 <tr>
+                                    <td style="font-weight: bold; font-size: 12px; border: none; width: 200px; background: #fcfcfc;">IRPP dû sur loyers perçus auprès des professionnels et part d'intérêts (25% ou 30%)</td>
+                                    <td style="width: 120px; border: none"></td>
+                                    <td class="tab active disabled-cell" id="taux_25_30_Principal" style="width: 120px;"></td>
+                                    <td class="tab active disabled-cell" style="width: 60px;"><input type="number" class="tab active disabled-cell" id="taux_25_30_cac" style="width: 60px; border: none;"></td>
+                                    <td class="tab active disabled-cell" id="taux_25_30_Penalites" style="width: 120px;"></td>
+                                    <td class="tab active disabled-cell" id="taux_25_30_Total" style="width: 120px;"></td>
+                                </tr>
+                                <tr>
+                                    <td style="font-weight: bold; font-size: 12px; border: none; width: 200px; background: #fcfcfc;" >IRPP dû sur loyers perçus auprès des professionnels et part d'intérêts au taux de minimum de perception</td>
+                                    <td style="width: 120px; border: none"></td>
+                                    <td class="tab active disabled-cell" id="tauxMinPerceptionPrincipal" style="width: 120px;"></td>
+                                    <td class="tab active disabled-cell" style="width: 60px;"><input type="number" class="tab active disabled-cell" id="tauxMinPerceptionCac" style="width: 60px; border: none;"></td>
+                                    <td class="tab active disabled-cell" id="tauxMinPerceptionPenalites" style="width: 120px;"></td>
+                                    <td class="tab active disabled-cell" id="tauxMinPerceptionTotal" style="width: 120px;"></td>
+                                </tr>
+                                <tr>
+                                    <td style="font-weight: bold; font-size: 12px; border: none; width: 200px; background: #fcfcfc;" >IRPP dû sur la plus-value (5% ou 10%)</td>
+                                    <td style="width: 120px; border: none"></td>
+                                    <td class="tab active disabled-cell" id="plus_value_Principal" style="width: 120px;"></td>
+                                    <td class="tab active disabled-cell" style="width: 60px;"><input type="number" class="tab active disabled-cell" id="plus_value_Cac" style="width: 60px; border: none;"></td>
+                                    <td class="tab active disabled-cell" id="plus_value_Penalites" style="width: 120px;"></td>
+                                    <td class="tab active disabled-cell" id="plus_value_Total" style="width: 120px;"></td>
+                                </tr>
+                                <tr>
+                                    <td style="font-weight: bold; font-size: 12px; border: none; width: 200px; background: #fcfcfc;" >IRPP sur revenus fonciers retenu à la source</td>
+                                    <td style="width: 120px; border: none"><input type="number" value="0" style="border: none;" id="revenuFoncierRetenu"></td>
+                                    <td class="tab active disabled-cell" id="revenuFoncierRetenuPrincipal" style="width: 120px;"></td>
+                                    <td class="tab active disabled-cell" style="width: 60px;"><input type="number" class="tab active disabled-cell" id="revenuFoncierRetenuCac" style="width: 60px; border: none;"></td>
+                                    <td style="width: 120px; border: none;"></td>
+                                    <td class="tab active disabled-cell" id="revenuFoncierRetenuTotal" style="width: 120px;"></td>
+                                </tr>
+                                <tr>
+                                    <td style="font-weight: bold; font-size: 12px; border: none; width: 200px; background: #fcfcfc;" >IRPP sur revenus fonciers à payer ou crédit</td>
+                                    <td style="width: 120px; border: none"></td>
+                                    <td class="tab active disabled-cell" id="revenuFoncierPayePrincipal" style="width: 120px;"></td>
+                                    <td class="tab active disabled-cell" style="width: 60px;"><input type="number" class="tab active disabled-cell" id="revenuFoncierPayeCac" style="width: 60px; border: none;"></td>
+                                    <td class="tab active disabled-cell" id="revenuFoncierPayePenalites" style="width: 120px;"></td>
+                                    <td class="tab active disabled-cell" id="revenuFoncierPayeTotal" style="width: 120px;"></td>
+                                </tr>
                             </tbody>
                         </table>
                     </fieldset>
-
-                    <div class="summary">
-                        <div class="box">
-                            <div><b>Récap – Revenu net imposable</b></div>
-                            <div id="c3-sum-net">0</div>
-                        </div>
-                        <div class="box">
-                            <div><b>Charges déductibles</b></div>
-                            <div id="c3-sum-charges">0</div>
-                        </div>
-                        <div class="box">
-                            <div><b>Revenu imposable</b></div>
-                            <div id="c3-sum-tax">0</div>
-                        </div>
-                    </div>
                 </div>`;
             },
             compute(panel){
-                let sumNet=0, sumCharges=0, sumTax=0;
-                const rows = panel.querySelectorAll('tbody tr');
-                rows.forEach(tr=>{
-                    const net = toNum(tr.querySelector('.c3-net').value);
-                    const charges = toNum(tr.querySelector('.c3-charges').value);
-                    const tax = Math.max(net - charges, 0); // logique propre Cat3
-                    tr.querySelector('.c3-tax').textContent = fmt(tax);
-                    sumNet += net; sumCharges += charges; sumTax += tax;
+                const data = [
+                    "302201844", "ABONG-BANG", "AFANLOUM", "AKO", "AKOEMAN", "AKONO", "AKOM II",
+                    "AKONOLIN", "AKWAYA", "ALOU", "AMBAM", "ANDEK", "ANGOSSAS", "ANTOK", "AWAE", 
+                    "AYOS", "BABADJOU", "BABESSI", "BAFOUSSAM Ier", "BAFOUSSAM IIe", "BAFOUSSAM IIIe", 
+                    "BAFUT", "BAGANG", "BAHAM", "BAKOU", "BALI", "BALIKUMBAT", "BAMENDA Ier", "BAMENDA IIe",
+                    "BAMENDA IIIe", "BAMENDJOU", "BAMOUNGO", "BAMUSSO", "BANA", "BANDJA", "BANDJOUN", "BANGANGTE",
+                    "BANGEM", "BANGOU", "BANGOURAIN", "BANKA", "BANKIM", "BANWA", "BANYO", "BARE-BAKEM", "BASHEO", "BASSAMBA", "BATCHAM", "BATCHENGA", "BATIBI", "BATIBO", "BATIE", "BATOURI", "BAYANGAM",
+                    "BAZOU", "BEBESSI", "BEKA", "BELABO", "BELEL", "BELO", "BENAKUMA", "BENGBIS", "BERTOUA Ier", "BERTOUA IIe", "BETARE OYA", "BIBEMI", "BIBEY", "BIKOK", "BIPINDI", "BIWONG BANE", "BIWONG-BULU",
+                    "BIYOUHA", "BLANGOUA", "BOGO", "BOKITO", "BONALEA", "BONDJOCK", "BOT MAKAK", "BOURRHA", "BUEA", "CAMPO", "COMMUNE INCONNUE", "DARAK", "DARGALA", "DATCHEKA", "DEMBO", "DEMDENG", "DEUK", "DIANG",
+                    "DIBAMBA", "DIKAM", "DIBOMBARI", "DIKOME-BALUE", "DIMAKO", "DIR", "DIZANGUE", "DJOHONG", "DJOUM", "DOUALA Ier", "DOUALA II", "DOUALA III", "DOUALA IV", "DOUALA V", "DOUALA VI", "DOUMAINTANG",
+                    "DOUME", "DSCHANG", "DZENG", "DZIGUILAO", "EBEBDA", "EBOLOWA Ier", "EBOLOWA II", "EBONE", "EDEA Ier", "EDEA II", "EDZENDOUAN", "EFOULAN", "EKONDO-TITI", "ELAK-OKU", "ELIG MFOMO", "ENDOUM", "ESEKA",
+                    "ESEKA 2", "ESSE", "EVODOULA", "EYUMOJOCK", "FIGUIL", "FOKOUE", "FONFUKA", "FONGO-TONGO", "FONTEM", "FOTOKOL", "FOUMBAN", "FOUMBOT", "FUNDONG", "FURU AWA", "GALIM", "GALIM TIGNERIE", "GARI-GOMBO", 
+                    "GAROUA Ier", "GAROUA IIe", "GAROUA IIIe", "GAROUA-BOULAÏ", "GASHIGA", "GAZAWA", "GOBO", "GOULFEY", "GUEME", "GUERE", "GUIDER", "GUIDIGUIS", "HILE ALIFA", "HINA", "IDA-BATO", "ISANGUELE", "JAKIRI",
+                    "KAELE", "KAÏ-KAÏ", "KALFOU", "KAR HAY", "KEKEM", "KENTZOU", "KETTE", "KIIKI", "KOLOFATA", "KOMBO ABEDIMO", "KOMBO ITINDI", "KONTCHA", "KON-YAMBETA", "KONYE", "KOUOPTAMO", "KOUSSERI", "KOUTABA", "KOZA",
+                    "KRIBI Ier", "KRIBI IIe", "KUMBA Ier", "KUMBA IIe", "KUMBA IIIe", "KUMBO", "KYE-OSSI", "LAGDO", "LANGOUA", "LEMBE YEZOUM", "LIMBE Ier", "LIMBE IIe", "LIMBE IIIe", "LOBO", "LOGONE BIRNI", "LOKOUNDJE", "LOLODORF",
+                    "LOMIE", "LOUM", "MA'AN", "MADINGRING", "MAGA", "MAGBA", "MAKAK", "MAKARY", "MAKENENE", "MALANTOUEN", "MAMFE", "MANDJOU", "MANJO", "MAROUA Ier", "MAROUA IIe", "MAROUA IIIe", "MARTAP", "MASSANGAM", "MASSOCK SONGLOULOU",
+                    "MATOMB", "MAYO BALEO", "MAYO DARLE", "MAYO HOURNA", "MAYO OULO", "MBALMAYO", "MBANDJOCK", "MBANG", "MBANGA", "MBANGASSINA", "MBANKOMO", "MBE", "MBENGWI", "MBIAME", "MBOMA", "MBONGUE", "MBOUDA", "MEIGANGA", "MELONG",
+                    "MENGANG", "MENGONG", "MENGUEME", "MERI", "MESSAMENA", "MESSOK", "MESSONDO", "MEYO MESSI", "MEYOMESSALA", "MFOU", "MINDIF", "MINDOUROU", "MINTA", "MINTOM", "MISAJE", "MOGODE", "MOKOLO", "MOLOUNDOU", "MOMBO", "MONATELE",
+                    "MORA", "MOUANKO", "MOULVOUDA", "MOUTOURWA", "MOZOGO", "MUNDEMBA", "MUYUKA", "MVANGAN", "MVENGUE", "NANGA-EBOKO", "NDE", "NDELELE", "NDIKINIMIKI", "NDOBIAN", "NDOM", "NDOP", "NDOUKOULA", "NDU", "NGAMBE", "NGAMBE TIKAR",
+                    "NGANHA", "NGAOUI", "NGAOUNDAL", "NGAOUNDERE Ier", "NGAOUNDERE IIe", "NGAOUNDERE IIIe", "NGOG-MAPUBI", "NGOMEZAP", "NGONG", "NGORO", "NGOULEMAKONG", "NGOUMOU", "NGOURA", "NGOYLA", "NGUELEBOK", "NGUELEMEDOUKA", "NGUI BASSAL",
+                    "NGUITI", "NGWEI", "NIETE", "NITOUKOU", "NJIKWA", "NJIMON", "NJINIKOM", "NJOMBE-PENJA", "NKAMBE", "NKOLAFAMBA", "NKOLMETET", "NKONDJOCK", "NKONG ZEM", "NKONGSAMBA Ier", "NKONGSAMBA IIe", "NKONGSAMBA IIIe", "NKOR", "NKOTENG",
+                    "NKUM", "NONI", "NSEM", "NTUI", "NWA", "NYAKOKOMBO", "NYAMBAKA", "NYANON", "OBALA", "OKOLA", "OKU", "OLAMZE", "OLANGUINA", "OMBESSA", "OULI", "OVENG", "PENKA MICHEL", "PETTE", "PITOA", "POLI", "POUMA", "REY BOUBA", "SA'A",
+                    "SALAPOUMBE", "SANGMELIMA", "SANTA", "SANTCHOU", "SOA", "SOMALOMO", "SOULEDE ROUA", "TCHATIBALI", "TCHOLIRE", "TIBATI", "TIGNERE", "TIKO", "TINTO", "TOKO", "TOKOMBERE", "TOMBEL", "TONGA", "TOUBORO", "TOULOUM", "TOUROUA", "TUBAH",
+                    "WABANE", "WAZA", "WEST COAST", "WIDIKUM BOFE", "WINA", "WUM", "YABASSI", "YAGOUA", "YAOUNDE I", "YAOUNDE II", "YAOUNDE III", "YAOUNDE IV", "YAOUNDE V", "YAOUNDE VI", "YAOUNDE VII", "YINGUI", "YOKADOUMA", "YOKO", "ZHOA", "ZINA", "ZOETELE"
+                ];
+
+                const tbody = document.getElementById("loyersBody");
+                
+                // Autocomplete helper
+                function attachAutocomplete(input, list, data){
+                    input.addEventListener("focus", () => {
+                        showList(data, list, input);
+                    });
+
+                    input.addEventListener("input", function() {
+                        const value = this.value.toLowerCase();
+                        const matches = value
+                            ? data.filter(item => item.toLowerCase().includes(value))
+                            : data;
+                        showList(matches, list, input);
+                    });
+
+                    function showList(items, list, input) {
+                        list.innerHTML = "";
+                        if (items.length === 0) {
+                            list.style.display = "none";
+                            return;
+                        }
+                        items.forEach(match => {
+                            const div = document.createElement("div");
+                            div.classList.add("autocomplete-item");
+                            div.textContent = match;
+                            div.addEventListener("click", function() {
+                                input.value = this.textContent;
+                                list.innerHTML = "";
+                                list.style.display = "none";
+                            });
+                            list.appendChild(div);
+                        });
+                        list.style.display = "block";
+                    }
+
+                    // Hide list if clicking outside
+                    document.addEventListener("click", function(e) {
+                        if (!e.target.closest(".autocomplete-container")) {
+                            list.style.display = "none";
+                        }
+                    });
+                }
+
+                // Add a new row
+                function addRow() {
+                    const row = document.createElement("tr")
+                    row.innerHTML = `
+                        <td><input type="text" style="font-weight: bold; font-size: 12px; border: none;" placeholder="IMMEUBLE N"></td>
+                        <td><input type="text" style="width: 120px; padding: 0;"></td>
+                        <td class="autocomplete-container"><input type="text" style="width: 120px; padding: 0;" class="autocomplete-input">
+                            <div class="autocomplete-list"></div>
+                        </td>
+                        <td><input type="text" style="width: 90px; padding: 0;"></td>
+                        <td><input type="text" style="width: 120px; padding: 0;"></td>
+                        <td><input type="number" placeholder="0" style="width: 120px; padding: 0;"></td>
+                        <td><input type="number" placeholder="0" style="width: 120px; padding: 0;"></td>
+                        <td class="delete-cell"></td>
+                    `;
+
+                    tbody.appendChild(row);
+
+                    // Attach autocomplete for this row
+                    const newInput = row.querySelector(".autocomplete-input");
+                    const newList = row.querySelector(".autocomplete-list");
+                    attachAutocomplete(newInput, newList, data);
+
+                    // Watch inputs to auto-add row & add delete button
+                    const inputs = row.querySelectorAll("input");
+                    inputs.forEach(input => {
+                        input.addEventListener("input", () => {
+                            const allFilled = Array.from(inputs).every(inp => inp.value.trim() !== "");
+
+                            if (allFilled && !row.hasAttribute("data-filled")) { // du genre si il y a une valeur qui est déja enregistrée ou définie dans la table, la condition sera fausse
+                                row.setAttribute("data-filled", "true"); // prevent duplicate new rows
+                                addRow(); 
+
+                                // Add delete button to the current row
+                                const deleteCell = row.querySelector(".delete-cell");
+                                const deleteBtn = document.createElement("button");
+                                deleteBtn.innerHTML = "🗑️";
+                                deleteBtn.style.border = "none";
+                                deleteBtn.style.background = "transparent";
+                                deleteBtn.style.cursor = "pointer";
+                                deleteBtn.title = "Supprimer cette ligne";
+
+                                deleteBtn.addEventListener("click", () => {
+                                    row.remove();
+                                    calculateTotals();
+                                });
+
+                                deleteCell.appendChild(deleteBtn);
+                            }
+                        });
+                    });
+                    
+                }
+
+                // When user types in number inputs
+                document.addEventListener("input", (e) =>{
+                    if (e.target.type === "number") {
+                        calculateTotals();
+                    }
                 });
-                panel.querySelector('#c3-sum-net').textContent = fmt(sumNet);
-                panel.querySelector('#c3-sum-charges').textContent  = fmt(sumCharges);
-                panel.querySelector('#c3-sum-tax').textContent  = fmt(sumTax);
-                return sumTax; // renvoyé pour le grand total
+
+                // Initialize autocomplete for the very first row
+                const firstInput = document.querySelector("#loyersBody .autocomplete-input");
+                const firstList = document.querySelector("#loyersBody .autocomplete-list");
+                if (firstInput && firstList) {
+                    attachAutocomplete(firstInput, firstList, data);
+                }
+
+                // Attach listener to the first row on page load
+                document.querySelectorAll("#loyersBody tr input").forEach(input=>{
+                    input.addEventListener("input", () => {
+                        const row = input.closest("tr");
+                        const inputs = row.querySelectorAll("input");   
+                        const allFilled = Array.from(inputs).every(inp => inp.value.trim() !== "");
+                        if (allFilled && !row.hasAttribute("data-filled")) {
+                            row.setAttribute("data-filled", "true");
+                            addRow();
+
+                            // Add delete button
+                            const deleteCell = row.querySelector(".delete-cell");
+                            const deleteBtn = document.createElement("button");
+                            deleteBtn.innerHTML = "🗑️";
+                            deleteBtn.style.border = "none";
+                            deleteBtn.style.background = "transparent";
+                            deleteBtn.style.cursor = "pointer";
+                            deleteBtn.title = "Supprimer cette ligne";
+                            deleteBtn.addEventListener("click", () => {
+                                row.remove();
+                                calculateTotals(); // recalc after removal
+                            });
+                            deleteCell.appendChild(deleteBtn);
+                        }
+                    });
+                });
+
+                function calculateTotals() {
+                    let totalPart = 0;
+                    let totalPro = 0;
+
+                    document.querySelectorAll("#loyersBody tr").forEach(row => {
+                        const inputs = row.querySelectorAll("input[type=number]");
+                        if (inputs.length >= 2) {
+                            totalPart += parseFloat(inputs[0].value) || 0;
+                            totalPro += parseFloat(inputs[1].value) || 0;
+                        }
+                    });
+
+                    document.getElementById("totalPart").textContent = totalPart;
+                    document.getElementById("totalPro").textContent = totalPro;
+
+                    let chargesForf = totalPro * 0.30;
+                    document.getElementById("chargesForf").textContent = chargesForf.toFixed(2);
+
+                    let totalNetPart = totalPart;
+                    let totalNetPro = totalPro - chargesForf;
+                    document.getElementById("totalNetPart").textContent = totalNetPart;
+                    document.getElementById("totalNetPro").textContent = totalNetPro;
+
+                }
+
+                // Logique du fonctionnement de la deuxième table
+                const tbody2 = document.getElementById("plusValuesBody");
+                // function addRow2() {
+                //     const row = document.createElement("tr");
+                //     row.innerHTML = `
+                //         <td style="font-weight: bold; font-size: 12px; border: none;" >IMMEUBLE N</td>
+                //         <td><input type="text" style="width: 60px;"></td>
+                //         <td><input type="text" style="width: 90px;"></td>
+                //         <td><input type="text" style="width: 90px;"></td>
+                //         <td><input type="text" style="width: 120px;"></td>
+                //         <td><input type="number" placeholder="0" class="montantVendu" style="width: 90px;"></td>
+                //         <td><input type="number" placeholder="0" class="montantAcquis" style="width: 90px;"></td>
+                //         <td><input type="number" placeholder="0" class="autreChargeDed" style="width: 120px;"></td>
+                //         <td style="width: 90px;">
+                //             <select class="modePaiement">
+                //                 <option value="" selected disabled hidden></option>
+                //                 <option value="cash">Espèces</option>
+                //                 <option value="wireTransfer">Virement</option>
+                //             </select>
+                //         </td>
+                //         <td class="tab active disabled-cell montantDesPlu" style="text-align: left; width: 90px;">0</td>
+                //         <td class="delete-cell"></td>
+                //     `;
+
+                //     tbody2.appendChild(row);
+
+
+                //     const montantVendu = row.querySelector(".montantVendu");
+                //     const montantAcquis = row.querySelector(".montantAcquis");
+                //     const autreChargeDed = row.querySelector(".autreChargeDed");
+                //     const montantDesPluCell = row.querySelector(".montantDesPlu");
+
+                //     function recalc() {
+                //         const v = parseInt(montantVendu.value) || 0;
+                //         const a = parseInt(montantAcquis.value) || 0;
+                //         const c = parseInt(autreChargeDed.value) || 0;
+                //         montantDesPluCell.textContent = v - a - c;
+                //     }
+
+                //     // Watch inputs to auto-add row & add delete button
+                //     const inputsAndSelects = row.querySelectorAll("input, select");
+                //     inputsAndSelects.forEach(input => {
+                //         input.addEventListener("input", () => {
+                //             recalc();
+                //             const allFilled = Array.from(inputsAndSelects).every(inp => inp.value.trim() !== "");
+                //             if (allFilled && !row.hasAttribute("data-filled")){
+                //                 row.setAttribute("data-filled", "true");
+                //                 addRow2();
+
+                //                 // Add delete button
+                //                 const deleteCell = row.querySelector(".delete-cell");
+                //                 const deleteBtn = document.createElement("button");
+                //                 deleteBtn.innerHTML = "🗑️";
+                //                 deleteBtn.style.border = "none";
+                //                 deleteBtn.style.background = "transparent";
+                //                 deleteBtn.style.cursor = "pointer";
+                //                 deleteBtn.title = "Supprimer cette ligne";
+                //                 deleteBtn.addEventListener("click", () => {
+                //                     row.remove();
+                //                     // calculateTotals2();
+                //                 });
+                //                 deleteCell.appendChild(deleteBtn);
+                //             }
+                //         });
+                //     });
+
+                // }
+
+                document.querySelectorAll("#plusValuesBody tr input").forEach(input => {
+                    input.addEventListener("input", () => {
+                        const row = input.closest("tr");
+                        const montantVendu = row.querySelector(".montantVendu");
+                        const montantAcquis = row.querySelector(".montantAcquis");
+                        const autreChargeDed = row.querySelector(".autreChargeDed");
+                        const montantDesPluCell = row.querySelector(".montantDesPlu");
+
+                        function recalc() {
+                            const v = parseInt(montantVendu.value) || 0;
+                            const a = parseInt(montantAcquis.value) || 0;
+                            const c = parseInt(autreChargeDed.value) || 0;
+                            montantDesPluCell.textContent = v - a - c;
+                        }
+                        const inputsAndSelects = row.querySelectorAll("input, select");
+
+                        inputsAndSelects.forEach(input => {
+                            input.addEventListener("input", () => {
+                                recalc();
+
+                                const allFilled = Array.from(inputsAndSelects).every(inp => inp.value.trim() !== "");
+                                if (allFilled && !row.hasAttribute("data-filled")) {
+                                    row.setAttribute("data-filled", "true");
+                                    // addRow2();
+
+                                    // Add delete button
+                                    // const deleteCell = row.querySelector(".delete-cell");
+                                    // const deleteBtn = document.createElement("button");
+                                    // deleteBtn.innerHTML = "🗑️";
+                                    // deleteBtn.style.border = "none";
+                                    // deleteBtn.style.background = "transparent";
+                                    // deleteBtn.style.cursor = "pointer";
+                                    // deleteBtn.title = "Supprimer cette ligne";
+                                    // deleteBtn.addEventListener("click", () => {
+                                    //     row.remove();
+                                    //     // calculateTotals2();
+                                    // });
+                                    // deleteCell.appendChild(deleteBtn);
+                                }
+                            });
+                        });
+                    });
+                });
+
+                function calculateTotals2(){
+
+                }
+
+
+                // Calculs de la table 3
+                const tbody3 = document.getElementById("partsDeParticipBody");
+                function addRow3() {
+                    const row = document.createElement ("tr");
+                    row.innerHTML = `
+                        <td style="font-weight: bold; font-size: 12px; border: none; width: 200px;" >SCI N</td>
+                        <td><input type="text" style="width: 90px;"></td>
+                        <td><input type="text" style="width: 120px;"></td>
+                        <td><input type="text" style="width: 120px;"></td>
+                        <td><input type="text" style="width: 120px;"></td>
+                        <td><input type="number" placeholder="0" style="width: 120px;"></td>
+                        <td class="delete-cell"></td>
+                    `;
+
+                    tbody3.appendChild(row);
+
+                    const inputs = row.querySelectorAll("input");
+                    inputs.forEach(input => {
+                        input.addEventListener("input", () => {
+                            const allFilled = Array.from(inputs).every(inp => inp.value.trim() !== "");
+                            if (allFilled && !row.hasAttribute("data-filled")) {
+                                row.setAttribute("data-filled", "true");
+                                addRow3();
+
+                                // Add delete button
+                                const deleteCell = row.querySelector(".delete-cell");
+                                const deleteBtn = document.createElement("button");
+                                deleteBtn.innerHTML = "🗑️";
+                                deleteBtn.style.border = "none";
+                                deleteBtn.style.background = "transparent";
+                                deleteBtn.style.cursor = "poiter";
+                                deleteBtn.title = "Supprimer cette ligne";
+                                deleteBtn.addEventListener("click", () =>{
+                                    row.remove();
+                                    calculateTotals3();
+                                });
+                                deleteCell.appendChild(deleteBtn);
+                            }
+                        });
+                    });
+                }
+
+                document.addEventListener("input", (g) =>{
+                    if (g.target.type === "number") {
+                        calculateTotals3();
+                    }
+                });
+
+                document.querySelectorAll("#partsDeParticipBody tr input").forEach(input => {
+                    input.addEventListener("input", () =>{
+                        const row =input.closest("tr");
+                        const inputs = row.querySelectorAll("input");
+                        const allFilled = Array.from(inputs).every(inp => inp.value.trim() !== "");
+                        if (allFilled && !row.hasAttribute("data-filled")) {
+                            row.setAttribute("data-filled", "true");
+                            addRow3();
+
+                            // Add delete button
+                            const deleteCell = row.querySelector(".delete-cell");
+                            const deleteBtn = document.createElement("button");
+                            deleteBtn.innerHTML = "🗑️";
+                            deleteBtn.style.border = "none";
+                            deleteBtn.style.background = "transparent";
+                            deleteBtn.style.cursor = "pointer";
+                            deleteBtn.title = "Supprimer cette ligne";
+                            deleteBtn.addEventListener("click", () => {
+                                row.remove();
+                                calculateTotals3();
+                            });
+                            deleteCell.appendChild(deleteBtn);
+                        }
+                    });
+                });
+
+                function calculateTotals3(){
+                    let totalDesParticip = 0;
+                    document.querySelectorAll("#partsDeParticipBody tr").forEach(row => {
+                        const inputs = row.querySelectorAll("input[type=number]");
+                        if (inputs.length >= 1) {
+                            totalDesParticip += parseInt(inputs[0].value) || 0;
+                        }
+                    });
+                    document.getElementById("totalDesParticip").textContent = totalDesParticip;
+                }
+
+
+
+                
             }
         },
         // ---------- CAT4 ----------
+        // cat4: {
+        //     title: 'IV - Bénéfices des Activités Artisanales, Industrielles, Commerciales et Assimilées',
+        //     render(){
+        //         const id='cat4';
+        //         return `
+        //         <div class="card panel" id="panel-${id}">
+        //             <fieldset>
+        //                 <legend>${this.title}</legend>
+        //                 <table>
+        //                     <thead>
+        //                         <tr>
+        //                             <th style="width:200px"></th>
+        //                             <th style="width: 160px;">CHIFFRE D'AFFAIRES</th>
+        //                             <th style="width: 160px;">MARGE BRUTE</th>
+        //                             <th style="width: 160px;">BÉNÉFICE IMPOSABLE</th>
+        //                         </tr>
+        //                     </thead>
+        //                     <tbody>
+        //                     ${[
+        //                         {code:'LINE30',label:'Chiffre d’affaires brut'},
+        //                         {code:'LINE31',label:'Charges déductibles (achats, frais généraux)'},
+        //                         {code:'LINE32',label:'Bénéfice net imposable'},
+        //                     ].map((r,i)=>`
+        //                         <tr>
+        //                             <td>${r.code}</td>
+        //                             <td style="text-align:left">${r.label}</td>
+        //                             <td><input type="number" class="c4-revenue" value="0"></td>
+        //                             <td><input type="number" class="c4-charges" value="0"></td>
+        //                             <td class="c4-tax">0</td>
+        //                         </tr>
+        //                     `).join('')}
+        //                     </tbody>
+        //                 </table>
+        //                 <button onclick="addRow()">+ Ajouter un immeuble</button>
+        //             </fieldset>
+        //         </div>`;
+        //     },
+        //     compute(panel){
+        //         let sumRevenue=0, sumCharges=0, sumTax=0;
+        //         const rows = panel.querySelectorAll('tbody tr');
+        //         rows.forEach(tr=>{
+        //             const revenue = toNum(tr.querySelector('.c4-revenue').value);
+        //             const charges = toNum(tr.querySelector('.c4-charges').value);
+        //             const tax = Math.max(revenue - charges, 0); // logique propre Cat4
+        //             tr.querySelector('.c4-tax').textContent = fmt(tax);
+        //             sumRevenue += revenue; sumCharges += charges; sumTax += tax;
+        //         });
+        //         panel.querySelector('#c4-sum-revenue').textContent = fmt(sumRevenue);
+        //         panel.querySelector('#c4-sum-charges').textContent  = fmt(sumCharges);
+        //         panel.querySelector('#c4-sum-tax').textContent  = fmt(sumTax);
+        //         return sumTax; // renvoyé pour le grand total
+        //     }
+        // },
         cat4: {
-            title: 'IV - Bénéfices des Activités Artisanales, Industrielles, Commerciales et Assimilées',
+            title: 'V - Bénéfices Agricoles',
             render(){
                 const id='cat4';
+                const lines = [
+                    {code:'LINE66',label:"Revenus des secteurs à marge brute ou administrés"},
+                    {code:'LINE67',label:"Revenus commerciaux"},
+                    {code:'LINE68',label:"Revenus industriels"},
+                    {code:'LINE69',label:"Revenus artisanaux"},
+                    {code:'LINE70',label:"Revenus d'exploitation minière, pétrolière et gazière"},
+                    {code:'LINE71',label:"Revenus d'exploitation forestière"},
+                    {code:'LINE72',label:"Revenus intermédiaires achat / vente (Immeuble / fonds de commerce)"},
+                    {code:'LINE73',label:"Revenus vente des terrains lotis"},
+                    {code:'LINE74',label:"Revenus location d'établissement commercial et industriel meublé"},
+                    {code:'LINE75',label:"Revenus location ou sous-location d'Immeuble meublé"},
+                    {code:'LINE76',label:"Revenus exploitation de jeux de hasard et de divertissement"},
+                    {code:'LINE77',label:"Revenus de mandataire ou agent commercial non salarié"},
+                    {code:'LINE78',label:"Rémunération dans le cadre de la vente directe par réseau"},
+                    {code:'LINE79',label:"Autres, à préciser dans la ligne suivante :"}
+                ];
+                const body = lines.map(r=>`
+                    <tr data-line="${r.code}">
+                    <td>${r.code}</td>
+                    <td style="text-align:left">${r.label}</td>
+                    <td><input type="number" class="c5-ca" placeholder="0"></td>
+                    <td><input type="number" class="c5-marge-brut" placeholder="0"></td>
+                    <td><input type="number" class="c5-ben-imp" placeholder="0"></td>
+                    </tr>
+                `).join('');
+
                 return `
                 <div class="card panel" id="panel-${id}">
                     <fieldset>
-                        <legend>${this.title}</legend>
-                        <table>
-                            <thead>
-                            <tr>
-                                <th style="width:80px">Ligne</th>
-                                <th>Libellé</th>
-                                <th>Chiffre d'affaires</th>
-                                <th>Charges déductibles</th>
-                                <th>Bénéfice imposable</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            ${[
-                                {code:'LINE30',label:'Chiffre d’affaires brut'},
-                                {code:'LINE31',label:'Charges déductibles (achats, frais généraux)'},
-                                {code:'LINE32',label:'Bénéfice net imposable'},
-                            ].map((r,i)=>`
-                                    <tr>
-                                    <td>${r.code}</td>
-                                    <td style="text-align:left">${r.label}</td>
-                                    <td><input type="number" class="c4-revenue" value="0"></td>
-                                    <td><input type="number" class="c4-charges" value="0"></td>
-                                    <td class="c4-tax">0</td>
-                                    </tr>
-                            `).join('')}
-                            </tbody>
-                        </table>
+                    <legend>${this.title}</legend>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th></th>
+                            <th></th>
+                            <th>CHIFFRE D'AFFAIRES</th>
+                            <th>MARGE BRUTE</th>
+                            <th>BÉNÉFICE IMPOSABLE</th>
+                            
+                        </tr>
+                        </thead>
+                        <tbody>${body}</tbody>
+                        <tfoot>
+                        <tr>
+                            <th colspan="2" style="text-align:left">Total bénéfice taxable</th>
+                            <th id="c5-total-ca" class="tab active disabled-cell" style="text-align: left;">0</th>
+                            <th id="c5-total-mb" class="tab active disabled-cell" style="text-align: left;">0</th>
+                            <th id="c5-total-bi" class="tab active disabled-cell" style="text-align: left;">0</th>
+
+                        </tr>
+                        </tfoot>
+                    </table>
                     </fieldset>
 
-                    <div class="summary">
-                        <div class="box">
-                            <div><b>Récap – Chiffre d'affaires brut</b></div>
-                            <div id="c4-sum-revenue">0</div>
-                        </div>
-                        <div class="box">
-                            <div><b>Charges déductibles</b></div>
-                            <div id="c4-sum-charges">0</div>
-                        </div>
-                        <div class="box">
-                            <div><b>Bénéfice imposable</b></div>
-                            <div id="c4-sum-tax">0</div>
-                        </div>
-                    </div>
+                    <fieldset>
+                    <legend>IRPP sur BA à payer</legend>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th style="width:280px"></th>
+                            <th>Montant retenu / déjà payé</th>
+                            <th>Principal</th>
+                            <th>CAC</th>
+                            <th>Pénalités</th>
+                            <th>Total</th>
+                        </tr>
+                        </thead>
+                        <tfoot>
+                        <tr>
+                            <td>IRPP sur BA dû</td>
+                            <td></td>
+                            <td class="tab active disabled-cell c5-irpp-due-principal" style="text-align: left; width: 120px;">0</td>
+                            <td class="tab active disabled-cell c5-irpp-due-cac" style="text-align: left; width: 90px;">0</td>
+                            <td class="tab active disabled-cell c5-irpp-due-pen" style="text-align: left; width: 120px;">0</td>
+                            <td class="tab active disabled-cell c5-irpp-due-total" style="text-align: left; width: 120px;">0</td>
+                        </tr>
+                        <tr>
+                            <td>IRPP sur BAIC au taux de minimum de perception basé sur le Chiffre d'affaires</td>
+                            <td></td>
+                            <td class="tab active disabled-cell c5-min-ca-principal" style="text-align: left; width: 120px;">0</td>
+                            <td class="tab active disabled-cell c5-min-ca-cac" style="text-align: left; width: 90px;">0</td>
+                            <td class="tab active disabled-cell c5-min-ca-pen" style="text-align: left; width: 120px;">0</td>
+                            <td class="tab active disabled-cell c5-min-ca-total" style="text-align: left; width: 120px;">0</td>
+                        </tr>
+                        <tr>
+                            <td>IRPP sur BAIC au taux de minimum de perception basé sur la Marge brute</td>
+                            <td class="c5-empty"><input type="number" id="c5-ret-source" placeholder="0" style="width: 120px;"></td>
+                            <td class="tab active disabled-cell c5-min-mb-principal" style="text-align: left; width: 120px;">0</td>
+                            <td class="tab active disabled-cell c5-min-mb-cac" style="text-align: left;width: 90px;">0</td>
+                            <td class="tab active disabled-cell c5-min-mb-pen" style="text-align: left; width: 120px;">0</td>
+                            <td class="tab active disabled-cell c5-min-mb-total" style="text-align: left; width: 120px;">0</td>
+                        </tr>
+                        <tr>
+                            <td>IRPP sur BAIC déjà payée (notamment dans la DSF) ou retenu à la source</td>
+                            <td></td>
+                            <td class="tab active disabled-cell c5-dsf-principal" style="text-align: left; width: 120px;">0</td>
+                            <td class="tab active disabled-cell c5-dsf-cac" style="text-align: left; width: 90px;">0</td>
+                            <td class="tab active disabled-cell c5-dsf-pen" style="text-align: left; width: 120px;">0</td>
+                            <td class="tab active disabled-cell c5-dsf-total" style="text-align: left; width: 120px;">0</td>
+                        </tr>
+                        <tr>
+                            <td>IRPP sur BAIC à payer ou crédit</td>
+                            <td></td>
+                            <td class="tab active disabled-cell c5-irpp-paid-cred-principal" style="text-align: left; width: 120px;">0</td>
+                            <td class="tab active disabled-cell c5-irpp-paid-cred-cac" style="text-align: left; width: 90px;">0</td>
+                            <td class="tab active disabled-cell c5-irpp-paid-cred-pen" style="text-align: left; width: 120px;">0</td>
+                            <td class="tab active disabled-cell c5-irpp-paid-cred-total" style="text-align: left; width: 120px;">0</td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                    </fieldset>
                 </div>`;
             },
             compute(panel){
-                let sumRevenue=0, sumCharges=0, sumTax=0;
-                const rows = panel.querySelectorAll('tbody tr');
-                rows.forEach(tr=>{
-                    const revenue = toNum(tr.querySelector('.c4-revenue').value);
-                    const charges = toNum(tr.querySelector('.c4-charges').value);
-                    const tax = Math.max(revenue - charges, 0); // logique propre Cat4
-                    tr.querySelector('.c4-tax').textContent = fmt(tax);
-                    sumRevenue += revenue; sumCharges += charges; sumTax += tax;
+                const tbody = panel.querySelector("tbody");
+
+                panel.addEventListener("input", (e) =>{
+                    if (e.target.type === "number") {
+                        calculateTotals();
+                    }
                 });
-                panel.querySelector('#c4-sum-revenue').textContent = fmt(sumRevenue);
-                panel.querySelector('#c4-sum-charges').textContent  = fmt(sumCharges);
-                panel.querySelector('#c4-sum-tax').textContent  = fmt(sumTax);
-                return sumTax; // renvoyé pour le grand total
+                function calculateTotals() {
+                    let totalCa = 0;
+                    let totalMb = 0;
+                    let totalBi = 0;
+
+                    tbody.querySelectorAll("tr").forEach(row => {
+                        const ca = parseInt(row.querySelector(".c5-ca")?.value) || 0;
+                        const mb = parseInt(row.querySelector(".c5-marge-brut")?.value) || 0;
+                        const bi = parseInt(row.querySelector(".c5-ben-imp")?.value) || 0;
+
+                        totalCa += ca;
+                        totalMb += mb;
+                        totalBi += bi;
+                    });
+
+                    panel.querySelector("#c5-total-ca").textContent = totalCa;
+                    panel.querySelector("#c5-total-mb").textContent = totalMb;
+                    panel.querySelector("#c5-total-bi").textContent = totalBi;
+
+                }
             }
-        },
+        }
     };
 
     // ---------- montage dynamique depuis la sélection ----------
